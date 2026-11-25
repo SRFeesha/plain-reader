@@ -1,11 +1,11 @@
 ---
-title: Welcome to Down
+title: Welcome to Plain Reader
 tags: [markdown, reader]
 ---
 
-# Down
+# Plain Reader
 
-A quiet place to read Markdown. It opens a file, renders it well, and gets out of the way. When you want to change something, press **⌘E** and click any block.
+A plain reader for plain-text files: Markdown, MDX, text and JSON. It opens a file, renders it well, and gets out of the way. When you want to change something, press **⌘E** and click any block.
 
 ## Reading
 

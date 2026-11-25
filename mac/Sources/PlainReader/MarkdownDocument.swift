@@ -8,7 +8,7 @@ final class MarkdownDocument: NSDocument {
 
     // Saving an untitled file, Rename and Move To all change the location.
     override var fileURL: URL? {
-        didSet { DispatchQueue.main.async { [weak self] in self?.downWindow?.sendLocation() } }
+        didSet { DispatchQueue.main.async { [weak self] in self?.plainWindow?.sendLocation() } }
     }
 
     override init() {
@@ -22,14 +22,14 @@ final class MarkdownDocument: NSDocument {
         addWindowController(DocumentWindowController(document: self))
     }
 
-    var downWindow: DocumentWindowController? { windowControllers.first as? DocumentWindowController }
+    var plainWindow: DocumentWindowController? { windowControllers.first as? DocumentWindowController }
 
     override func read(from data: Data, ofType typeName: String) throws {
         guard let string = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .macOSRoman) else {
             throw CocoaError(.fileReadInapplicableStringEncoding)
         }
         text = string
-        downWindow?.sendDocument(reload: true)
+        plainWindow?.sendDocument(reload: true)
     }
 
     override func data(ofType typeName: String) throws -> Data {

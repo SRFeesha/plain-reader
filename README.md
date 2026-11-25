@@ -1,6 +1,6 @@
-# Down
+# Plain Reader
 
-A quiet Markdown reader for the Mac. The name is the second half of Markdown, and the ↓ in its icon. It opens a file, renders it well, and gets out of the way. Press ⌘E when you want to change something, then click any block to edit its Markdown in place.
+A plain reader for plain-text files: Markdown, MDX, text and JSON. It opens a file, renders it well, and gets out of the way. Press ⌘E when you want to change something, then click any block to edit its Markdown in place.
 
 Under 1 MB. A small AppKit app that renders with the system's WebKit. No Electron, no Rust, no account.
 
@@ -10,7 +10,7 @@ Under 1 MB. A small AppKit app that renders with the system's WebKit. No Electro
 ./mac/build.sh --install
 ```
 
-This builds the web UI, compiles the Swift shell, and copies `Down.app` to `~/Applications`. To make it the default for Markdown files: select any `.md` file in Finder, press ⌘I, choose Down under *Open with*, then *Change All…*
+This builds the web UI, compiles the Swift shell, and copies it to `~/Applications/Plain Reader.app`. To make it the default for Markdown files: select any `.md` file in Finder, press ⌘I, choose Plain Reader under *Open with*, then *Change All…*
 
 Needs Node and the Xcode Command Line Tools (`xcode-select --install`). Full Xcode isn't needed.
 

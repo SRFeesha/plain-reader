@@ -18,7 +18,7 @@ export interface Heading {
   line: number
 }
 
-interface DownEnv {
+interface PlainEnv {
   headings: Heading[]
   slugs: Map<string, number>
 }
@@ -59,7 +59,7 @@ export const md: MarkdownIt = markdownit({
 
 // Headings get stable ids and are collected for the table of contents.
 md.renderer.rules.heading_open = (tokens, idx, options, rawEnv, self) => {
-  const env = rawEnv as unknown as DownEnv
+  const env = rawEnv as unknown as PlainEnv
   const token = tokens[idx]
   const inline = tokens[idx + 1]
   const text = (inline.children ?? [])
@@ -248,8 +248,8 @@ export function renderDoc(src: string): { blocks: Block[]; headings: Heading[] }
     body = Array<string>(fm.end).fill('').concat(lines.slice(fm.end)).join('\n')
   }
 
-  const downEnv: DownEnv = { headings: [], slugs: new Map() }
-  const env = downEnv as unknown as Record<string, unknown>
+  const plainEnv: PlainEnv = { headings: [], slugs: new Map() }
+  const env = plainEnv as unknown as Record<string, unknown>
   const tokens = md.parse(body, env)
   const tail: Token[] = []
 
@@ -281,5 +281,5 @@ export function renderDoc(src: string): { blocks: Block[]; headings: Heading[] }
   if (tail.length) {
     blocks.push({ start: lines.length, end: lines.length, kind: 'footnotes', html: md.renderer.render(tail, md.options, env) })
   }
-  return { blocks, headings: downEnv.headings }
+  return { blocks, headings: plainEnv.headings }
 }

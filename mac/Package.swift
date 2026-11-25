@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "Down",
+    name: "PlainReader",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "Down", path: "Sources/Down")
+        .executableTarget(name: "PlainReader", path: "Sources/PlainReader")
     ]
 )

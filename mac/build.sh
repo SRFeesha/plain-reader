@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds Down.app. Pass --install to copy it to ~/Applications.
+# Builds PlainReader.app. Pass --install to copy it to ~/Applications.
 set -euo pipefail
 MAC="${0:A:h}"
 ROOT="${MAC:h}"
@@ -10,7 +10,7 @@ echo "→ web UI"
 echo "→ native shell"
 cd "$MAC"
 swift build -c release 2>&1 | grep -v "search path" | tail -1
-BIN="$(swift build -c release --show-bin-path)/Down"
+BIN="$(swift build -c release --show-bin-path)/PlainReader"
 
 if [[ ! -f "$MAC/AppIcon.icns" ]]; then
   echo "→ icon"
@@ -25,10 +25,10 @@ if [[ ! -f "$MAC/AppIcon.icns" ]]; then
   rm -rf "$TMP"
 fi
 
-APP="$MAC/build/Down.app"
+APP="$MAC/build/PlainReader.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/web"
-cp "$BIN" "$APP/Contents/MacOS/Down"
+cp "$BIN" "$APP/Contents/MacOS/PlainReader"
 cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
 cp "$MAC/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "$ROOT/web/dist/index.html" "$APP/Contents/Resources/web/index.html"
@@ -36,7 +36,7 @@ codesign --force --sign - "$APP" 2>/dev/null
 echo "✓ $APP"
 
 if [[ "${1:-}" == "--install" ]]; then
-  DEST="$HOME/Applications/Down.app"
+  DEST="$HOME/Applications/Plain Reader.app"
   mkdir -p "$HOME/Applications"
   rm -rf "$DEST"
   cp -R "$APP" "$DEST"

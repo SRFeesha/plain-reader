@@ -1,5 +1,5 @@
 {
-  "name": "down-web",
+  "name": "plain-reader-web",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
