@@ -309,6 +309,7 @@ body[data-mode='edit'] .blk a { cursor: text; }
 .editor.k-h1, .editor.k-h2, .editor.k-h3, .editor.k-h4 { margin-top: 0.8em; }
 .editor.k-code, .editor.k-table, .editor.k-frontmatter, .editor.k-html, .editor.k-esm, .editor.k-jsx { font: 0.8rem/1.6 var(--mono); padding: 1rem 1.1rem; }
 
+body[data-mode='source'] #content { display: none; }
 .editor.source {
   background: none;
   box-shadow: none;
