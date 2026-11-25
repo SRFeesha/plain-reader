@@ -141,6 +141,17 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     func windowDidBecomeKey(_ notification: Notification) {
         sendLocation() // pick up files added or renamed while away
+        updateTitlebar()
+    }
+
+    /// One window: the title bar melts into the page. Several tabs: it goes back to the
+    /// system's own material, so the selected tab stands out from the others.
+    private func updateTitlebar() {
+        guard let window else { return }
+        let tabbed = (window.tabbedWindows?.count ?? 0) > 1
+        for w in window.tabbedWindows ?? [window] where w.titlebarAppearsTransparent == tabbed {
+            w.titlebarAppearsTransparent = !tabbed
+        }
     }
 
     private func run(_ command: String) {
