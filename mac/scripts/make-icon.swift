@@ -1,8 +1,8 @@
-// Draws the app icon: a warm paper tile with ".md" set in SF Mono.
-// Usage: swift scripts/make-icon.swift out.png [md|arrow]
+// Draws the app icon: a warm paper tile with M↓, Markdown's own mark, set in type.
+// Usage: swift scripts/make-icon.swift out.png [arrow|md]
 import AppKit
 
-let variant = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "md"
+let variant = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "arrow"
 let size: CGFloat = 1024
 let image = NSImage(size: NSSize(width: size, height: size))
 image.lockFocus()
