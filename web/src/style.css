@@ -797,3 +797,6 @@ p.plain { white-space: pre-wrap; overflow-wrap: anywhere; }
   font: 0.75rem var(--mono);
   color: var(--text-3);
 }
+
+/* Fixed chrome sits above positioned content like code blocks; popovers (20) above both. */
+.toc-panel, .toc-rail, #status { z-index: 10; }
