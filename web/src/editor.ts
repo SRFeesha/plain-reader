@@ -9,7 +9,11 @@ export interface EditorHooks {
   onMove?(dir: -1 | 1): void
   onDeleteEmpty?(): boolean
   onEnterAtEnd?(): boolean
+  /** Plain text: no Markdown shortcuts, / menu or format toolbar. */
+  plain?: boolean
 }
+
+const plainEditors = new WeakSet<HTMLTextAreaElement>()
 
 export type Format = 'bold' | 'italic' | 'strike' | 'code' | 'highlight' | 'link' | 'task'
 
@@ -382,7 +386,7 @@ const toolbar = (() => {
 
   function update() {
     const ta = active
-    if (!ta || ta.selectionStart === ta.selectionEnd || slash.isOpen || document.activeElement !== ta) {
+    if (!ta || plainEditors.has(ta) || ta.selectionStart === ta.selectionEnd || slash.isOpen || document.activeElement !== ta) {
       el.hidden = true
       return
     }
@@ -408,6 +412,8 @@ export function closePopovers() {
 const PAIRS: Record<string, string> = { '*': '*', _: '_', '`': '`', '~': '~', '=': '=', '(': ')', '[': ']', '"': '"' }
 
 export function attachEditor(ta: HTMLTextAreaElement, hooks: EditorHooks): () => void {
+  const plain = !!hooks.plain
+  if (plain) plainEditors.add(ta)
   const onKey = (e: KeyboardEvent) => {
     if (slash.handleKey(e)) {
       e.preventDefault()
@@ -416,6 +422,11 @@ export function attachEditor(ta: HTMLTextAreaElement, hooks: EditorHooks): () =>
     }
     const mod = e.metaKey || e.ctrlKey
     const handled = ((): boolean => {
+      if (mod && !e.altKey && plain) {
+        if (e.code === 'ArrowUp' && e.shiftKey && hooks.onMove) { hooks.onMove(-1); return true }
+        if (e.code === 'ArrowDown' && e.shiftKey && hooks.onMove) { hooks.onMove(1); return true }
+        return false
+      }
       if (mod && !e.altKey) {
         switch (e.code) {
           case 'KeyB': if (!e.shiftKey) { format(ta, 'bold'); return true } break
@@ -437,6 +448,11 @@ export function attachEditor(ta: HTMLTextAreaElement, hooks: EditorHooks): () =>
           hooks.onEscape()
           return true
         case 'Enter':
+          if (plain) {
+            // A blank line ends the paragraph, as it does in the file.
+            const at = ta.selectionStart
+            return !e.shiftKey && at === ta.selectionEnd && at === ta.value.length && ta.value.endsWith('\n') && !!hooks.onEnterAtEnd && hooks.onEnterAtEnd()
+          }
           return !e.shiftKey && handleEnter(ta, hooks)
         case 'Tab':
           return indentLines(ta, e.shiftKey ? -1 : 1)
@@ -447,7 +463,7 @@ export function attachEditor(ta: HTMLTextAreaElement, hooks: EditorHooks): () =>
         case 'Backspace':
           return ta.value === '' && !!hooks.onDeleteEmpty && hooks.onDeleteEmpty()
       }
-      if (ta.selectionStart !== ta.selectionEnd && PAIRS[e.key]) {
+      if (!plain && ta.selectionStart !== ta.selectionEnd && PAIRS[e.key]) {
         const s = ta.selectionStart
         const e2 = ta.selectionEnd
         const inner = ta.value.slice(s, e2)
@@ -462,6 +478,10 @@ export function attachEditor(ta: HTMLTextAreaElement, hooks: EditorHooks): () =>
     }
   }
   const onInput = (e: Event) => {
+    if (plain) {
+      hooks.onInput?.()
+      return
+    }
     if (!slash.isOpen) slash.maybeOpen(ta, (e as InputEvent).data ?? null)
     else slash.update()
     hooks.onInput?.()

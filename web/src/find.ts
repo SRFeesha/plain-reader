@@ -120,6 +120,9 @@ export class Finder {
     }
     const r = this.ranges[this.index]
     if (!r) return
+    // A match inside a folded JSON node unfolds it.
+    for (let d = r.startContainer.parentElement?.closest('details:not([open])'); d; d = d.parentElement?.closest('details:not([open])'))
+      (d as HTMLDetailsElement).open = true
     this.highlights?.set('find-current', new Highlight(r))
     const box = r.getBoundingClientRect()
     if (box.top < 60 || box.bottom > innerHeight - 60) scrollBy({ top: box.top - innerHeight / 3 })

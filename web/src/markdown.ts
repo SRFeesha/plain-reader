@@ -234,18 +234,69 @@ function frontmatter(lines: string[]): { end: number; html: string } | null {
   return null
 }
 
+// MDX: leading import/export lines, and blocks that are only JSX components.
+// Both render as quiet code, so the Markdown around them reads normally.
+function mdxBlocks(lines: string[], from: number): Block[] {
+  const out: Block[] = []
+  let i = from
+  for (; i < lines.length; ) {
+    if (lines[i].trim() === '') {
+      i++
+      continue
+    }
+    if (!/^(import|export)\b/.test(lines[i])) break
+    let j = i
+    while (j < lines.length && lines[j].trim() !== '') j++
+    const code = lines.slice(i, j).join('\n')
+    out.push({ start: i, end: j, kind: 'esm', html: `<div class="code quiet"><span class="code-lang">js</span><pre><code>${hljs.highlight(code, { language: 'javascript', ignoreIllegals: true }).value}</code></pre></div>` })
+    i = j
+  }
+  let fence = ''
+  for (; i < lines.length; i++) {
+    const l = lines[i]
+    const f = /^\s*(`{3,}|~{3,})/.exec(l)
+    if (fence) {
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length) fence = ''
+      continue
+    }
+    if (f) {
+      fence = f[1]
+      continue
+    }
+    const m = /^<([A-Z][\w.]*)/.exec(l)
+    if (!m || (i > from && lines[i - 1].trim() !== '')) continue
+    const close = `</${m[1]}>`
+    let j = i + 1
+    if (!/\/>\s*$/.test(l) && !l.includes(close)) {
+      let k = i + 1
+      while (k < lines.length && !lines[k].includes(close)) k++
+      if (k < lines.length) j = k + 1
+    }
+    while (j < lines.length && lines[j].trim() !== '') j++
+    const code = lines.slice(i, j).join('\n')
+    out.push({ start: i, end: j, kind: 'jsx', html: `<div class="code quiet"><span class="code-lang">jsx</span><button class="code-copy" type="button" aria-label="Copy code">Copy</button><pre><code>${esc(code)}</code></pre></div>` })
+    i = j - 1
+  }
+  return out
+}
+
 /**
  * Parses the whole document once, then renders each top-level block on its
  * own, keeping the source line range so a block can be edited in place.
  */
-export function renderDoc(src: string): { blocks: Block[]; headings: Heading[] } {
+export function renderDoc(src: string, mdx = false): { blocks: Block[]; headings: Heading[] } {
   const lines = src.split('\n')
   const blocks: Block[] = []
   let body = src
   const fm = frontmatter(lines)
-  if (fm) {
-    blocks.push({ start: 0, end: fm.end, kind: 'frontmatter', html: fm.html })
-    body = Array<string>(fm.end).fill('').concat(lines.slice(fm.end)).join('\n')
+  if (fm) blocks.push({ start: 0, end: fm.end, kind: 'frontmatter', html: fm.html })
+  const own = mdx ? mdxBlocks(lines, fm?.end ?? 0) : []
+  blocks.push(...own)
+  // Lines rendered here are blanked for markdown-it, so line numbers still match.
+  if (fm || own.length) {
+    const blank = new Set<number>()
+    for (const b of fm ? [{ start: 0, end: fm.end }, ...own] : own) for (let n = b.start; n < b.end; n++) blank.add(n)
+    body = lines.map((l, n) => (blank.has(n) ? '' : l)).join('\n')
   }
 
   const plainEnv: PlainEnv = { headings: [], slugs: new Map() }
@@ -278,6 +329,7 @@ export function renderDoc(src: string): { blocks: Block[]; headings: Heading[] }
     i = j + 1
   }
 
+  if (own.length) blocks.sort((a, b) => a.start - b.start)
   if (tail.length) {
     blocks.push({ start: lines.length, end: lines.length, kind: 'footnotes', html: md.renderer.render(tail, md.options, env) })
   }

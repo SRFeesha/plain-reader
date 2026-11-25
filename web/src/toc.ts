@@ -65,7 +65,7 @@ export class Toc {
         const a = document.createElement('a')
         a.href = '#'
         a.dataset.path = `${dir}/${name}`
-        a.textContent = name.replace(/\.(md|markdown|mdown|mkd|mdx|txt)$/i, '')
+        a.textContent = name.replace(/\.md$/i, '') // other extensions stay, so notes.md and notes.json differ
         a.title = name
         if (name === current) {
           a.classList.add('on')
@@ -79,7 +79,8 @@ export class Toc {
     this.refreshVisibility()
   }
 
-  set(all: Heading[]) {
+  set(all: Heading[], title = 'Contents') {
+    this.nav.querySelector('.toc-contents .toc-title')!.textContent = title
     const headings = all.filter((h) => h.level <= 4)
     this.hasHeadings = headings.length >= 2
     this.refreshVisibility()

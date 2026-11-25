@@ -23,6 +23,27 @@
       <key>LSItemContentTypes</key><array><string>net.daringfireball.markdown</string></array>
       <key>NSDocumentClass</key><string>MarkdownDocument</string>
     </dict>
+    <dict>
+      <key>CFBundleTypeName</key><string>MDX Document</string>
+      <key>CFBundleTypeRole</key><string>Editor</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key><array><string>com.mdxjs.mdx</string></array>
+      <key>NSDocumentClass</key><string>MarkdownDocument</string>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key><string>Plain Text Document</string>
+      <key>CFBundleTypeRole</key><string>Editor</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key><array><string>public.plain-text</string></array>
+      <key>NSDocumentClass</key><string>MarkdownDocument</string>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key><string>JSON Document</string>
+      <key>CFBundleTypeRole</key><string>Editor</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key><array><string>public.json</string></array>
+      <key>NSDocumentClass</key><string>MarkdownDocument</string>
+    </dict>
   </array>
   <key>UTImportedTypeDeclarations</key>
   <array>
@@ -33,8 +54,18 @@
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.filename-extension</key>
-        <array><string>md</string><string>markdown</string><string>mdown</string><string>mkd</string><string>mdx</string></array>
+        <array><string>md</string><string>markdown</string><string>mdown</string><string>mkd</string></array>
         <key>public.mime-type</key><array><string>text/markdown</string></array>
+      </dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>com.mdxjs.mdx</string>
+      <key>UTTypeDescription</key><string>MDX Document</string>
+      <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key><array><string>mdx</string></array>
+        <key>public.mime-type</key><array><string>text/mdx</string></array>
       </dict>
     </dict>
   </array>

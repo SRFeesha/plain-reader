@@ -4,10 +4,21 @@ import UniformTypeIdentifiers
 /// Finds files a document points to: relative paths first, then by name
 /// anywhere in its vault (the nearest folder with .obsidian or .git).
 enum Resolver {
-    static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx", "txt"]
+    static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx", "txt", "json"]
 
+    /// Files Plain Reader opens itself: Markdown, MDX, text and JSON.
     static func isMarkdown(_ url: URL) -> Bool {
         markdownExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// How the web UI renders a file: "markdown", "mdx", "text" or "json".
+    static func kind(of url: URL?) -> String {
+        switch url?.pathExtension.lowercased() {
+        case "mdx": return "mdx"
+        case "json": return "json"
+        case "txt", "text": return "text"
+        default: return "markdown"
+        }
     }
 
     private static var cache: [String: URL] = [:]

@@ -108,17 +108,20 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     func sendDocument(reload: Bool) {
         guard pageReady, let doc = markdownDocument else { return }
-        let payload: [String: Any] = ["text": doc.text, "name": doc.displayName ?? "Untitled", "reload": reload]
+        let payload: [String: Any] = [
+            "text": doc.text, "name": doc.displayName ?? "Untitled", "reload": reload,
+            "kind": Resolver.kind(of: doc.fileURL),
+        ]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
         webView.evaluateJavaScript("window.plain && window.plain.open(\(json))")
         sendLocation()
     }
 
-    /// Where the file lives and which Markdown files sit next to it.
+    /// Where the file lives, how it reads, and which readable files sit next to it.
     func sendLocation() {
         guard pageReady else { return }
-        var payload: [String: Any] = ["home": NSHomeDirectory()]
+        var payload: [String: Any] = ["home": NSHomeDirectory(), "kind": Resolver.kind(of: markdownDocument?.fileURL)]
         if let url = markdownDocument?.fileURL {
             let dir = url.deletingLastPathComponent()
             let siblings = ((try? FileManager.default.contentsOfDirectory(

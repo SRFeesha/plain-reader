@@ -6,6 +6,7 @@ import { bridge } from './bridge'
 import { Toc } from './toc'
 import { Finder } from './find'
 import { renderBreadcrumb, wireBreadcrumb, type Location } from './place'
+import { kindFromName, isProse, renderJson, renderText, type Kind, type Rendered } from './kinds'
 import welcome from './welcome.md?raw'
 
 type Mode = 'read' | 'edit' | 'source'
@@ -31,6 +32,8 @@ let rendered: string[] = []
 let mode: Mode = 'read'
 let modeBeforeSource: Mode = 'read'
 let docName = 'Untitled'
+let kind: Kind = 'markdown'
+let summary: string | undefined
 let dirty = false
 let editing: Editing | null = null
 let sourceTa: HTMLTextAreaElement | null = null
@@ -115,10 +118,19 @@ function updateTitle() {
 
 // ------------------------------------------------------------------ render
 
+function renderAny(): Rendered {
+  if (kind === 'json') return renderJson(source)
+  if (kind === 'text') return renderText(source)
+  return renderDoc(source, kind === 'mdx')
+}
+
 function render() {
-  const r = renderDoc(source)
+  const r = renderAny()
   blocks = r.blocks
-  const htmls = blocks.map((b) => DOMPurify.sanitize(b.html, purify) as string)
+  summary = r.summary
+  // Text and JSON are escaped as they render; only Markdown can carry HTML.
+  const markup = kind === 'markdown' || kind === 'mdx'
+  const htmls = blocks.map((b) => (markup ? (DOMPurify.sanitize(b.html, purify) as string) : b.html))
   const kids = Array.from(content.children) as HTMLElement[]
   let pre = 0
   while (pre < kids.length && pre < htmls.length && rendered[pre] === htmls[pre]) pre++
@@ -141,7 +153,7 @@ function render() {
     ;(el as HTMLElement).dataset.i = String(i)
   })
   rendered = htmls
-  toc.set(r.headings)
+  toc.set(r.headings, kind === 'json' ? 'Keys' : 'Contents')
   body.classList.toggle('empty', source.trim() === '')
   updateStatus()
   spy()
@@ -159,7 +171,7 @@ function startEdit(target: number | { insertAt: number }, caret: number | 'start
   let start: number
   let end: number
   let el: HTMLElement
-  let kind = 'p'
+  let blockKind = 'p'
   const fresh = typeof target !== 'number'
   if (typeof target !== 'number') {
     const lines = source.split('\n')
@@ -178,7 +190,7 @@ function startEdit(target: number | { insertAt: number }, caret: number | 'start
     if (!b || b.kind === 'footnotes') return
     start = b.start
     end = b.end
-    kind = b.kind
+    blockKind = b.kind
     el = content.children[target] as HTMLElement
     rendered[target] = '' // force a fresh render of this block afterwards
   }
@@ -187,11 +199,11 @@ function startEdit(target: number | { insertAt: number }, caret: number | 'start
   el.innerHTML = ''
   el.classList.add('is-editing')
   const ta = document.createElement('textarea')
-  ta.className = `editor k-${kind}`
+  ta.className = `editor k-${blockKind}`
   ta.value = text
   ta.rows = 1
   ta.spellcheck = true
-  ta.placeholder = source.trim() === '' ? 'Start writing. Type / for blocks.' : 'Type / for blocks'
+  ta.placeholder = kind === 'text' ? 'Start writing.' : source.trim() === '' ? 'Start writing. Type / for blocks.' : 'Type / for blocks'
   el.append(ta)
   autosize(ta)
   const pos = caret === 'end' ? text.length : caret === 'start' ? 0 : Math.min(caret, text.length)
@@ -236,6 +248,7 @@ function startEdit(target: number | { insertAt: number }, caret: number | 'start
       return true
     },
     onMove: (dir) => moveBlock(dir),
+    plain: kind === 'text',
   })
   editing = { start, end, el, ta, fresh, detach }
 }
@@ -321,6 +334,7 @@ function toggleTaskLine(line: number) {
 // -------------------------------------------------------------------- modes
 
 function setMode(next: Mode) {
+  if (next === 'edit' && kind === 'json') next = 'source' // JSON is edited as raw text
   if (next === mode) return
   if (editing) commitEdit()
   if (mode === 'source') leaveSource()
@@ -496,11 +510,18 @@ themeDot.setAttribute('aria-haspopup', 'true')
 statusEl.append(themeDot, statusMode, statusWords)
 
 function updateStatus() {
-  const words = (content.textContent ?? '').match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0
-  const mins = Math.max(1, Math.round(words / 230))
   // The button names what it does: start editing, or finish.
   statusMode.textContent = mode === 'read' ? 'Edit' : 'Done'
-  statusMode.title = mode === 'read' ? 'Edit this file (⌘E)' : mode === 'edit' ? 'Done editing (⌘E)' : 'Close source view (⇧⌘E)'
+  statusMode.title =
+    mode === 'read' ? (kind === 'json' ? 'Edit the raw JSON (⌘E)' : 'Edit this file (⌘E)') : mode === 'edit' ? 'Done editing (⌘E)' : 'Close source view (⇧⌘E)'
+  if (!isProse(kind)) {
+    statusWords.textContent = summary ?? ''
+    return
+  }
+  let text = ''
+  for (const el of content.children) if (!/\bk-(esm|jsx)\b/.test(el.className)) text += el.textContent + ' '
+  const words = text.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)?.length ?? 0
+  const mins = Math.max(1, Math.round(words / 230))
   statusWords.textContent = `${words.toLocaleString()} words · ${mins} min`
 }
 statusMode.addEventListener('click', () => command(mode === 'source' ? 'toggleSource' : 'toggleEdit'))
@@ -665,7 +686,7 @@ function undo(redo = false) {
 function command(name: string) {
   if (name.startsWith('theme:')) return applyTheme(name.slice(6))
   switch (name) {
-    case 'toggleEdit': return mode === 'source' ? setMode('edit') : toggleEdit()
+    case 'toggleEdit': return kind === 'json' ? toggleSource() : mode === 'source' ? setMode('edit') : toggleEdit()
     case 'toggleSource': return toggleSource()
     case 'toggleToc': return toggleToc()
     case 'find': return finder.open()
@@ -679,6 +700,7 @@ function command(name: string) {
     case 'undo': return undo()
     case 'redo': return undo(true)
     case 'bold': case 'italic': case 'strike': case 'code': case 'highlight': case 'link': case 'task': {
+      if (kind !== 'markdown' && kind !== 'mdx') return
       const ta = activeEditor()
       if (ta) format(ta, name as Format)
       return
@@ -738,7 +760,13 @@ addEventListener('blur', flush)
 
 // -------------------------------------------------------------- documents
 
-function load(text: string, name: string, keepView = false) {
+function setKind(next: Kind) {
+  kind = next
+  body.dataset.kind = next
+}
+setKind(kind)
+
+function load(text: string, name: string, keepView = false, as?: Kind) {
   if (editing) {
     editing.detach()
     if (editing.fresh) editing.el.remove()
@@ -748,6 +776,11 @@ function load(text: string, name: string, keepView = false) {
   const y = scrollY
   const next = text.replace(/\r\n?/g, '\n')
   docName = name
+  const nextKind = as ?? kindFromName(name)
+  if (nextKind !== kind) {
+    setKind(nextKind)
+    keepView = false
+  }
   if (!keepView) {
     undoStack.length = 0
     redoStack.length = 0
@@ -768,8 +801,12 @@ function load(text: string, name: string, keepView = false) {
   if (keepView) scrollTo(0, y)
   else {
     scrollTo(0, 0)
-    setMode(source.trim() === '' ? 'edit' : 'read')
-    if (source.trim() === '') startEdit({ insertAt: 0 })
+    const empty = source.trim() === ''
+    if (kind === 'json') setMode(empty ? 'source' : 'read')
+    else {
+      setMode(empty ? 'edit' : 'read')
+      if (empty) startEdit({ insertAt: 0 })
+    }
   }
 }
 
@@ -778,7 +815,12 @@ async function openFile() {
   const pick = (window as unknown as { showOpenFilePicker?: Picker }).showOpenFilePicker
   if (pick) {
     try {
-      const [h] = await pick({ types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown', '.mdx', '.txt'] } }] })
+      const [h] = await pick({
+        types: [
+          { description: 'Markdown, MDX and text', accept: { 'text/markdown': ['.md', '.markdown', '.mdx'], 'text/plain': ['.txt'] } },
+          { description: 'JSON', accept: { 'application/json': ['.json'] } },
+        ],
+      })
       const f = await h.getFile()
       fileHandle = h
       load(await f.text(), f.name)
@@ -789,7 +831,7 @@ async function openFile() {
   }
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.md,.markdown,.mdx,.txt,text/markdown'
+  input.accept = '.md,.markdown,.mdx,.txt,.json,text/markdown,text/plain,application/json'
   input.onchange = async () => {
     const f = input.files?.[0]
     if (f) load(await f.text(), f.name)
@@ -802,7 +844,7 @@ async function saveFile() {
   type SavePicker = (o: object) => Promise<FileSystemFileHandle>
   const pick = (window as unknown as { showSaveFilePicker?: SavePicker }).showSaveFilePicker
   try {
-    if (!fileHandle && pick) fileHandle = await pick({ suggestedName: docName.endsWith('.md') ? docName : `${docName}.md` })
+    if (!fileHandle && pick) fileHandle = await pick({ suggestedName: /\.[^.]+$/.test(docName) ? docName : `${docName}.md` })
     if (!fileHandle) return toast('Saving needs Chrome or the Mac app')
     const w = await (fileHandle as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable()
     await w.write(text)
@@ -836,12 +878,21 @@ if (!bridge.native) {
 
 // The native shell drives these.
 ;(window as unknown as { plain: unknown }).plain = {
-  open(doc: { text: string; name: string; reload?: boolean }) {
-    load(doc.text, doc.name, !!doc.reload)
+  open(doc: { text: string; name: string; reload?: boolean; kind?: Kind }) {
+    load(doc.text, doc.name, !!doc.reload, doc.kind)
   },
   command,
   notice: (text: string) => toast(text, 4000),
-  location(loc: Location) {
+  location(loc: Location & { kind?: Kind }) {
+    // Rename can change the extension, and with it how the file reads.
+    if (loc.kind && loc.kind !== kind) {
+      if (editing) commitEdit()
+      if (mode !== 'read') setMode('read')
+      setKind(loc.kind)
+      rendered = []
+      content.innerHTML = ''
+      render()
+    }
     renderBreadcrumb(placeEl, loc)
     toc.setFolder(loc.path, loc.siblings)
   },
