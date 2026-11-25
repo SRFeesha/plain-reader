@@ -8,7 +8,7 @@ final class MarkdownDocument: NSDocument {
 
     // Saving an untitled file, Rename and Move To all change the location.
     override var fileURL: URL? {
-        didSet { DispatchQueue.main.async { [weak self] in self?.plainWindow?.sendLocation() } }
+        didSet { DispatchQueue.main.async { DocumentWindowController.broadcastLocation() } }
     }
 
     override init() {
@@ -20,6 +20,12 @@ final class MarkdownDocument: NSDocument {
 
     override func makeWindowControllers() {
         addWindowController(DocumentWindowController(document: self))
+    }
+
+    override func close() {
+        super.close()
+        // The other windows drop this file from their "open" marks.
+        DispatchQueue.main.async { DocumentWindowController.broadcastLocation() }
     }
 
     var plainWindow: DocumentWindowController? { windowControllers.first as? DocumentWindowController }

@@ -51,7 +51,8 @@ export class Toc {
     this.nav.querySelector<HTMLElement>('.rail-folder')!.hidden = !this.hasFolder
   }
 
-  setFolder(path: string | undefined, siblings: string[] = []) {
+  setFolder(path: string | undefined, siblings: string[] = [], open: string[] = []) {
+    const openSet = new Set(open)
     this.hasFolder = !!path
     this.files.innerHTML = ''
     if (path) {
@@ -67,6 +68,15 @@ export class Toc {
         a.dataset.path = `${dir}/${name}`
         a.textContent = name.replace(/\.md$/i, '') // other extensions stay, so notes.md and notes.json differ
         a.title = name
+        if (openSet.has(a.dataset.path) || name === current) {
+          // A dot marks every file open in a window or tab; the current one is also bold.
+          a.classList.add('open')
+          a.title = `${name}: open`
+          const note = document.createElement('span')
+          note.className = 'sr'
+          note.textContent = ', open'
+          a.append(note)
+        }
         if (name === current) {
           a.classList.add('on')
           a.setAttribute('aria-current', 'page')

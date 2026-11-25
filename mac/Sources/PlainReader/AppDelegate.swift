@@ -1,7 +1,6 @@
 import AppKit
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let recentMenu = NSMenu(title: "Open Recent")
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private var openedFiles = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -31,29 +30,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         if !hasVisibleWindows { NSDocumentController.shared.openDocument(nil) }
         return false
-    }
-
-    // MARK: Open Recent
-
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        guard menu === recentMenu else { return }
-        menu.removeAllItems()
-        for url in NSDocumentController.shared.recentDocumentURLs {
-            let item = NSMenuItem(title: url.lastPathComponent, action: #selector(openRecent(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = url
-            item.image = NSWorkspace.shared.icon(forFile: url.path)
-            item.image?.size = NSSize(width: 16, height: 16)
-            item.toolTip = url.path
-            menu.addItem(item)
-        }
-        if !menu.items.isEmpty { menu.addItem(.separator()) }
-        menu.addItem(NSMenuItem(title: "Clear Menu", action: #selector(NSDocumentController.clearRecentDocuments(_:)), keyEquivalent: ""))
-    }
-
-    @objc private func openRecent(_ sender: NSMenuItem) {
-        guard let url = sender.representedObject as? URL else { return }
-        NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in }
     }
 
     /// Sends a web command to the front document window, even when no window is key.
@@ -110,10 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         _ = menu("File") { m in
             item(m, "New", "newDocument:", "n")
             item(m, "Open…", "openDocument:", "o")
-            let recent = NSMenuItem(title: "Open Recent", action: nil, keyEquivalent: "")
-            recentMenu.delegate = self
-            recent.submenu = recentMenu
-            m.addItem(recent)
+            // AppKit adds its own Open Recent submenu after "Open…" in document apps.
             m.addItem(.separator())
             item(m, "Close", "performClose:", "w")
             item(m, "Save", "saveDocument:", "s")

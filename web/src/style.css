@@ -765,3 +765,26 @@ p.plain { white-space: pre-wrap; overflow-wrap: anywhere; }
 }
 
 .no-transitions, .no-transitions * { transition: none !important; }
+
+/* Open files: a dot in the folder list for each file open in a window or tab. */
+.toc-files a { position: relative; padding-left: 0.9rem; }
+.toc-files a.open::before {
+  content: '';
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.35rem;
+  margin-top: -0.175rem;
+  border-radius: 999px;
+  background: var(--text-3);
+}
+.toc-files a.on::before { background: var(--accent); }
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

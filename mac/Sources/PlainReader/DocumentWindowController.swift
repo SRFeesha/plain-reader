@@ -115,10 +115,17 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
         webView.evaluateJavaScript("window.plain && window.plain.open(\(json))")
-        sendLocation()
+        DocumentWindowController.broadcastLocation()
     }
 
     /// Where the file lives, how it reads, and which readable files sit next to it.
+    /// Every window refreshes its sidebar, so each one marks the files open in any window or tab.
+    static func broadcastLocation() {
+        for case let doc as MarkdownDocument in NSDocumentController.shared.documents {
+            doc.plainWindow?.sendLocation()
+        }
+    }
+
     func sendLocation() {
         guard pageReady else { return }
         var payload: [String: Any] = ["home": NSHomeDirectory(), "kind": Resolver.kind(of: markdownDocument?.fileURL)]
@@ -133,6 +140,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 .prefix(500)
             payload["path"] = url.path
             payload["siblings"] = Array(siblings)
+            payload["open"] = NSDocumentController.shared.documents.compactMap { $0.fileURL?.path }
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }

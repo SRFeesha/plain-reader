@@ -894,7 +894,7 @@ if (!bridge.native) {
       render()
     }
     renderBreadcrumb(placeEl, loc)
-    toc.setFolder(loc.path, loc.siblings)
+    toc.setFolder(loc.path, loc.siblings, loc.open)
   },
   text: () => currentText(),
 }

@@ -7,6 +7,7 @@ export interface Location {
   path?: string
   home: string
   siblings?: string[]
+  open?: string[]
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
