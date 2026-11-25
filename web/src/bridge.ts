@@ -5,11 +5,11 @@ type Handler = { postMessage(message: unknown): void }
 
 declare global {
   interface Window {
-    webkit?: { messageHandlers?: { leaf?: Handler } }
+    webkit?: { messageHandlers?: { down?: Handler } }
   }
 }
 
-const handler = window.webkit?.messageHandlers?.leaf
+const handler = window.webkit?.messageHandlers?.down
 
 const hasScheme = (s: string) => /^[a-z][a-z0-9+.-]*:/i.test(s)
 
@@ -32,9 +32,9 @@ export const bridge = {
   assetURL(src: string, search = false): string {
     if (!handler || !src || hasScheme(src) || src.startsWith('#') || src.startsWith('//')) return src
     const clean = encodeURI(safeDecode(src))
-    if (search) return 'leaf-doc://local/' + clean
-    if (src.startsWith('/')) return 'leaf-doc://abs' + clean
-    return 'leaf-doc://local/' + clean.replace(/^\.\//, '')
+    if (search) return 'down-doc://local/' + clean
+    if (src.startsWith('/')) return 'down-doc://abs' + clean
+    return 'down-doc://local/' + clean.replace(/^\.\//, '')
   },
 
   copy(text: string) {

@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "Leaf",
+    name: "Down",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "Leaf", path: "Sources/Leaf")
+        .executableTarget(name: "Down", path: "Sources/Down")
     ]
 )

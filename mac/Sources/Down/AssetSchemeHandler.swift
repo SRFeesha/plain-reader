@@ -1,8 +1,8 @@
 import Foundation
 import WebKit
 
-/// Serves the bundled UI (leaf-app://app/index.html) and files next to the
-/// open document (leaf-doc://local/images/a.png, leaf-doc://abs/Users/...).
+/// Serves the bundled UI (down-app://app/index.html) and files next to the
+/// open document (down-doc://local/images/a.png, down-doc://abs/Users/...).
 final class AssetSchemeHandler: NSObject, WKURLSchemeHandler {
     var documentURL: () -> URL? = { nil }
     private var stopped = Set<ObjectIdentifier>()
@@ -41,12 +41,12 @@ final class AssetSchemeHandler: NSObject, WKURLSchemeHandler {
 
     private static func file(for url: URL, document: URL?) -> URL? {
         switch url.scheme {
-        case "leaf-app":
+        case "down-app":
             guard let resources = Bundle.main.resourceURL?.appendingPathComponent("web") else { return nil }
             let path = url.path.isEmpty || url.path == "/" ? "index.html" : String(url.path.dropFirst())
             let file = resources.appendingPathComponent(path).standardizedFileURL
             return file.path.hasPrefix(resources.path) ? file : nil
-        case "leaf-doc":
+        case "down-doc":
             if url.host == "abs" { return URL(fileURLWithPath: url.path) }
             return Resolver.resolve(String(url.path.dropFirst()), relativeTo: document, preferMarkdown: false)
         default:

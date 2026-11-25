@@ -21,7 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         openedFiles = true
         for url in urls {
             NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, error in
-                if let error { NSLog("Leaf: could not open %@: %@", url.path, error.localizedDescription) }
+                if let error { NSLog("Down: could not open %@: %@", url.path, error.localizedDescription) }
             }
         }
     }
@@ -57,10 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// Sends a web command to the front document window, even when no window is key.
-    @objc func leafCommand(_ sender: NSMenuItem) {
+    @objc func downCommand(_ sender: NSMenuItem) {
         let windows = [NSApp.keyWindow, NSApp.mainWindow].compactMap { $0 } + NSApp.orderedWindows
         let controller = windows.lazy.compactMap { $0.windowController as? DocumentWindowController }.first
-        controller?.leafCommand(sender)
+        controller?.downCommand(sender)
     }
 
     // MARK: Menu
@@ -87,24 +87,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Commands handled by the web UI.
         func web(_ m: NSMenu, _ title: String, _ command: String, _ key: String = "",
                  _ mods: NSEvent.ModifierFlags = .command) {
-            let i = item(m, title, "leafCommand:", key, mods)
+            let i = item(m, title, "downCommand:", key, mods)
             i.representedObject = command
             i.target = self
         }
 
-        _ = menu("Leaf") { m in
-            item(m, "About Leaf", "orderFrontStandardAboutPanel:")
+        _ = menu("Down") { m in
+            item(m, "About Down", "orderFrontStandardAboutPanel:")
             m.addItem(.separator())
             let services = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
             services.submenu = NSMenu(title: "Services")
             NSApp.servicesMenu = services.submenu
             m.addItem(services)
             m.addItem(.separator())
-            item(m, "Hide Leaf", "hide:", "h")
+            item(m, "Hide Down", "hide:", "h")
             item(m, "Hide Others", "hideOtherApplications:", "h", [.command, .option])
             item(m, "Show All", "unhideAllApplications:")
             m.addItem(.separator())
-            item(m, "Quit Leaf", "terminate:", "q")
+            item(m, "Quit Down", "terminate:", "q")
         }
 
         _ = menu("File") { m in

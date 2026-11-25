@@ -1,9 +1,9 @@
 ---
-title: Welcome to Leaf
+title: Welcome to Down
 tags: [markdown, reader]
 ---
 
-# Leaf
+# Down
 
 A quiet place to read Markdown. It opens a file, renders it well, and gets out of the way. When you want to change something, press **⌘E** and click any block.
 

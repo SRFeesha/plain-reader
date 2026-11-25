@@ -35,8 +35,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     init(document: MarkdownDocument) {
         let config = WKWebViewConfiguration()
-        config.setURLSchemeHandler(assets, forURLScheme: "leaf-app")
-        config.setURLSchemeHandler(assets, forURLScheme: "leaf-doc")
+        config.setURLSchemeHandler(assets, forURLScheme: "down-app")
+        config.setURLSchemeHandler(assets, forURLScheme: "down-doc")
         config.userContentController = WKUserContentController()
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1040, height: 780), configuration: config)
 
@@ -58,11 +58,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         window.delegate = self
 
         assets.documentURL = { [weak document] in document?.fileURL }
-        config.userContentController.add(WeakMessageHandler(self), name: "leaf")
+        config.userContentController.add(WeakMessageHandler(self), name: "down")
         webView.navigationDelegate = self
         webView.setValue(false, forKey: "drawsBackground")
         if #available(macOS 13.3, *) { webView.isInspectable = true }
-        webView.load(URLRequest(url: URL(string: "leaf-app://app/index.html")!))
+        webView.load(URLRequest(url: URL(string: "down-app://app/index.html")!))
     }
 
     @available(*, unavailable)
@@ -111,7 +111,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let payload: [String: Any] = ["text": doc.text, "name": doc.displayName ?? "Untitled", "reload": reload]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.leaf && window.leaf.open(\(json))")
+        webView.evaluateJavaScript("window.down && window.down.open(\(json))")
         sendLocation()
     }
 
@@ -133,7 +133,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.leaf && window.leaf.location(\(json))")
+        webView.evaluateJavaScript("window.down && window.down.location(\(json))")
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
@@ -141,11 +141,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     private func run(_ command: String) {
-        webView.evaluateJavaScript("window.leaf && window.leaf.command('\(command)')")
+        webView.evaluateJavaScript("window.down && window.down.command('\(command)')")
     }
 
     /// Menu items carry the web command name as their representedObject.
-    @objc func leafCommand(_ sender: NSMenuItem) {
+    @objc func downCommand(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         run(name)
     }
@@ -178,7 +178,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private func notice(_ text: String) {
         guard let data = try? JSONSerialization.data(withJSONObject: [text]),
               let json = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.leaf && window.leaf.notice(\(json)[0])")
+        webView.evaluateJavaScript("window.down && window.down.notice(\(json)[0])")
     }
 
     /// Matches the title bar to the page, and its appearance to light or dark themes.
@@ -199,7 +199,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { return decisionHandler(.cancel) }
-        if url.scheme == "leaf-app" || url.scheme == "leaf-doc" || url.absoluteString == "about:blank" {
+        if url.scheme == "down-app" || url.scheme == "down-doc" || url.absoluteString == "about:blank" {
             return decisionHandler(.allow)
         }
         decisionHandler(.cancel)

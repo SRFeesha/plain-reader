@@ -52,7 +52,7 @@ const finder = new Finder(() => content, () => sourceTa)
 const purify = {
   ADD_ATTR: ['data-line', 'data-wiki', 'loading'],
   SANITIZE_DOM: false,
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|leaf-doc|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|down-doc|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 }
 
 // ------------------------------------------------------------------ source
@@ -528,12 +528,12 @@ const THEMES: { id: string; name: string; swatch: string[]; dark?: boolean }[] =
   { id: 'graphite', name: 'Graphite', swatch: ['#121212', '#3a3a3a', '#b9a3f5'], dark: true },
 ]
 const systemDark = matchMedia('(prefers-color-scheme: dark)')
-let theme = localStorage.getItem('leaf.theme') ?? 'stone'
+let theme = localStorage.getItem('down.theme') ?? 'stone'
 
 function applyTheme(id: string) {
   const t = THEMES.find((x) => x.id === id) ?? THEMES[0]
   theme = t.id
-  localStorage.setItem('leaf.theme', t.id)
+  localStorage.setItem('down.theme', t.id)
   const root = document.documentElement
   // Swap colours in one frame, with transitions off, so nothing smears.
   root.classList.add('no-transitions')
@@ -550,7 +550,7 @@ function applyTheme(id: string) {
 systemDark.addEventListener('change', () => applyTheme(theme))
 // Every open window follows a theme change made in another one.
 addEventListener('storage', (e) => {
-  if (e.key === 'leaf.theme' && e.newValue && e.newValue !== theme) applyTheme(e.newValue)
+  if (e.key === 'down.theme' && e.newValue && e.newValue !== theme) applyTheme(e.newValue)
 })
 
 let themeMenu: HTMLElement | null = null
@@ -631,19 +631,19 @@ function toggleShortcuts() {
   body.append(el)
 }
 
-let zoom = Number(localStorage.getItem('leaf.zoom') || 1)
+let zoom = Number(localStorage.getItem('down.zoom') || 1)
 function setZoom(z: number) {
   zoom = Math.min(1.6, Math.max(0.8, Math.round(z * 100) / 100))
   document.documentElement.style.setProperty('--zoom', String(zoom))
-  localStorage.setItem('leaf.zoom', String(zoom))
+  localStorage.setItem('down.zoom', String(zoom))
 }
 setZoom(zoom)
 
 function toggleToc() {
   const off = body.classList.toggle('toc-off')
-  localStorage.setItem('leaf.toc', off ? 'off' : 'on')
+  localStorage.setItem('down.toc', off ? 'off' : 'on')
 }
-if (localStorage.getItem('leaf.toc') === 'off') body.classList.add('toc-off')
+if (localStorage.getItem('down.toc') === 'off') body.classList.add('toc-off')
 
 function undo(redo = false) {
   const ta = activeEditor()
@@ -835,7 +835,7 @@ if (!bridge.native) {
 }
 
 // The native shell drives these.
-;(window as unknown as { leaf: unknown }).leaf = {
+;(window as unknown as { down: unknown }).down = {
   open(doc: { text: string; name: string; reload?: boolean }) {
     load(doc.text, doc.name, !!doc.reload)
   },
