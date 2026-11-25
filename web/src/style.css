@@ -330,7 +330,8 @@ body[data-mode='source'] #content { display: none; }
 }
 .toc-list, .toc-files { list-style: none; margin: 0; padding: 0; }
 .toc-list li { margin: 0; padding-left: calc(var(--depth) * 0.8rem); }
-.toc-folder { margin-bottom: 1.75rem; }
+.toc-folder, .toc-elsewhere { margin-bottom: 1.75rem; }
+.toc-elsewhere[hidden] { display: none; }
 .toc-folder[hidden], .toc-contents[hidden] { display: none; }
 .toc-files {
   max-height: 14rem;
@@ -787,4 +788,12 @@ p.plain { white-space: pre-wrap; overflow-wrap: anywhere; }
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Also open: files from other folders, with their folder after the name. */
+.toc-open { max-height: 8rem; }
+.toc-open .where {
+  margin-left: 0.4rem;
+  font: 0.75rem var(--mono);
+  color: var(--text-3);
 }

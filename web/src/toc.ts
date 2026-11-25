@@ -7,12 +7,14 @@ import type { Heading } from './markdown'
 export class Toc {
   private list: HTMLOListElement
   private files: HTMLOListElement
+  private elsewhere: HTMLOListElement
   private folderTitle: HTMLElement
   private rail: HTMLElement
   private items: { h: Heading; a: HTMLAnchorElement; dash: HTMLElement }[] = []
   private signature = ''
   private activeId = ''
   private hasFolder = false
+  private hasElsewhere = false
   private hasHeadings = false
 
   constructor(
@@ -21,11 +23,13 @@ export class Toc {
     private onOpenFile: (path: string) => void,
   ) {
     nav.innerHTML = `<div class="toc-panel">
+      <section class="toc-elsewhere" hidden><div class="toc-title">Also open</div><ol class="toc-files toc-open"></ol></section>
       <section class="toc-folder" hidden><div class="toc-title"></div><ol class="toc-files"></ol></section>
       <section class="toc-contents"><div class="toc-title">Contents</div><ol class="toc-list"></ol></section>
     </div><div class="toc-rail"><span class="rail-folder" hidden></span><div class="rail-dashes"></div></div>`
     this.list = nav.querySelector('.toc-list')!
-    this.files = nav.querySelector('.toc-files')!
+    this.files = nav.querySelector('.toc-folder .toc-files')!
+    this.elsewhere = nav.querySelector('.toc-open')!
     this.folderTitle = nav.querySelector('.toc-folder .toc-title')!
     this.rail = nav.querySelector('.rail-dashes')!
     nav.addEventListener('click', (e) => {
@@ -45,7 +49,7 @@ export class Toc {
   }
 
   private refreshVisibility() {
-    this.nav.classList.toggle('few', !this.hasHeadings && !this.hasFolder)
+    this.nav.classList.toggle('few', !this.hasHeadings && !this.hasFolder && !this.hasElsewhere)
     this.nav.querySelector<HTMLElement>('.toc-contents')!.hidden = !this.hasHeadings
     this.nav.querySelector<HTMLElement>('.toc-folder')!.hidden = !this.hasFolder
     this.nav.querySelector<HTMLElement>('.rail-folder')!.hidden = !this.hasFolder
@@ -55,6 +59,7 @@ export class Toc {
     const openSet = new Set(open)
     this.hasFolder = !!path
     this.files.innerHTML = ''
+    this.renderElsewhere(path, open)
     if (path) {
       const slash = path.lastIndexOf('/')
       const dir = path.slice(0, slash)
@@ -87,6 +92,35 @@ export class Toc {
       this.files.querySelector('.on')?.scrollIntoView({ block: 'nearest' })
     }
     this.refreshVisibility()
+  }
+
+  /** Files open in other windows or tabs that live outside this file's folder. */
+  private renderElsewhere(path: string | undefined, open: string[]) {
+    const dir = path ? path.slice(0, path.lastIndexOf('/')) : null
+    const others = open.filter((p) => p !== path && p.slice(0, p.lastIndexOf('/')) !== dir)
+    this.elsewhere.innerHTML = ''
+    for (const p of others) {
+      const parts = p.split('/')
+      const name = parts[parts.length - 1]
+      const li = document.createElement('li')
+      const a = document.createElement('a')
+      a.href = '#'
+      a.dataset.path = p
+      a.className = 'open'
+      a.title = `${p}: open`
+      a.textContent = name.replace(/\.md$/i, '')
+      const where = document.createElement('span')
+      where.className = 'where'
+      where.textContent = parts[parts.length - 2] ?? '/'
+      const note = document.createElement('span')
+      note.className = 'sr'
+      note.textContent = ', open'
+      a.append(where, note)
+      li.append(a)
+      this.elsewhere.append(li)
+    }
+    this.nav.querySelector<HTMLElement>('.toc-elsewhere')!.hidden = others.length === 0
+    this.hasElsewhere = others.length > 0
   }
 
   set(all: Heading[], title = 'Contents') {
