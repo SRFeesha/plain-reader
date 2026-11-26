@@ -4,6 +4,13 @@ import type { Heading } from './markdown'
 // contents. A quiet column on wide windows; on narrow ones a rail of short
 // dashes on the right that opens on hover.
 
+/** Document text in the left-to-right chrome: isolated, so Hebrew or Arabic names read right, rows still align left. */
+function bdi(text: string) {
+  const el = document.createElement('bdi')
+  el.textContent = text
+  return el
+}
+
 export class Toc {
   private list: HTMLOListElement
   private files: HTMLOListElement
@@ -22,11 +29,12 @@ export class Toc {
     private onPick: (h: Heading) => void,
     private onOpenFile: (path: string) => void,
   ) {
+    // The rail repeats the panel in miniature, so screen readers skip it.
     nav.innerHTML = `<div class="toc-panel">
-      <section class="toc-elsewhere" hidden><div class="toc-title">Also open</div><ol class="toc-files toc-open"></ol></section>
-      <section class="toc-folder" hidden><div class="toc-title"></div><ol class="toc-files"></ol></section>
-      <section class="toc-contents"><div class="toc-title">Contents</div><ol class="toc-list"></ol></section>
-    </div><div class="toc-rail"><span class="rail-folder" hidden></span><div class="rail-dashes"></div></div>`
+      <section class="toc-elsewhere" aria-labelledby="toc-elsewhere-title" hidden><div class="toc-title" id="toc-elsewhere-title">Also open</div><ol class="toc-files toc-open"></ol></section>
+      <section class="toc-folder" aria-labelledby="toc-folder-title" hidden><div class="toc-title" id="toc-folder-title"></div><ol class="toc-files"></ol></section>
+      <section class="toc-contents" aria-labelledby="toc-contents-title"><div class="toc-title" id="toc-contents-title">Contents</div><ol class="toc-list"></ol></section>
+    </div><div class="toc-rail" aria-hidden="true"><span class="rail-folder" hidden></span><div class="rail-dashes"></div></div>`
     this.list = nav.querySelector('.toc-list')!
     this.files = nav.querySelector('.toc-folder .toc-files')!
     this.elsewhere = nav.querySelector('.toc-open')!
@@ -64,14 +72,14 @@ export class Toc {
       const slash = path.lastIndexOf('/')
       const dir = path.slice(0, slash)
       const current = path.slice(slash + 1)
-      this.folderTitle.textContent = dir.slice(dir.lastIndexOf('/') + 1) || '/'
+      this.folderTitle.replaceChildren(bdi(dir.slice(dir.lastIndexOf('/') + 1) || '/'))
       this.folderTitle.title = dir
       for (const name of siblings.length ? siblings : [current]) {
         const li = document.createElement('li')
         const a = document.createElement('a')
         a.href = '#'
         a.dataset.path = `${dir}/${name}`
-        a.textContent = name.replace(/\.md$/i, '') // other extensions stay, so notes.md and notes.json differ
+        a.append(bdi(name.replace(/\.md$/i, ''))) // other extensions stay, so notes.md and notes.json differ
         a.title = name
         if (openSet.has(a.dataset.path) || name === current) {
           // A dot marks every file open in a window or tab; the current one is also bold.
@@ -108,10 +116,9 @@ export class Toc {
       a.dataset.path = p
       a.className = 'open'
       a.title = `${p}: open`
-      a.textContent = name.replace(/\.md$/i, '')
-      const where = document.createElement('span')
+      a.append(bdi(name.replace(/\.md$/i, '')))
+      const where = bdi(parts[parts.length - 2] ?? '/')
       where.className = 'where'
-      where.textContent = parts[parts.length - 2] ?? '/'
       const note = document.createElement('span')
       note.className = 'sr'
       note.textContent = ', open'
@@ -143,7 +150,7 @@ export class Toc {
       const a = document.createElement('a')
       a.href = `#${h.id}`
       a.dataset.i = String(i)
-      a.textContent = h.text || 'Untitled'
+      a.append(bdi(h.text || 'Untitled'))
       a.title = h.text
       li.style.setProperty('--depth', String(depth))
       li.append(a)

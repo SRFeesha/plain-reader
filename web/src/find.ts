@@ -18,7 +18,7 @@ export class Finder {
     this.bar = document.createElement('div')
     this.bar.className = 'popover find'
     this.bar.hidden = true
-    this.bar.innerHTML = `<input type="search" placeholder="Find" spellcheck="false" aria-label="Find"><span class="find-count" role="status"></span><button type="button" data-d="-1" title="Previous ⇧⌘G" aria-label="Previous match">↑</button><button type="button" data-d="1" title="Next ⌘G" aria-label="Next match">↓</button>`
+    this.bar.innerHTML = `<input type="search" dir="auto" placeholder="Find" spellcheck="false" aria-label="Find"><span class="find-count" role="status"></span><button type="button" data-d="-1" title="Previous ⇧⌘G" aria-label="Previous match">↑</button><button type="button" data-d="1" title="Next ⌘G" aria-label="Next match">↓</button>`
     document.body.append(this.bar)
     this.input = this.bar.querySelector('input')!
     this.count = this.bar.querySelector('.find-count')!

@@ -82,6 +82,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             if let s = body["url"] as? String, let url = URL(string: s) { NSWorkspace.shared.open(url) }
         case "openLink":
             if let href = body["href"] as? String { openLink(href) }
+        case "openFile":
+            if let path = body["path"] as? String { openFile(URL(fileURLWithPath: path)) }
         case "reveal":
             if let path = body["path"] as? String {
                 var isDir: ObjCBool = false
@@ -190,10 +192,17 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             let name = (path as NSString).lastPathComponent
             return notice("Couldn’t find “\(name)” next to this file or in its folder tree. Check the link, or create the file.")
         }
-        if Resolver.isMarkdown(target) {
-            NSDocumentController.shared.openDocument(withContentsOf: target, display: true) { _, _, _ in }
+        openFile(target)
+    }
+
+    private func openFile(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return notice("“\(url.lastPathComponent)” isn’t there anymore. It may have been moved or renamed.")
+        }
+        if Resolver.isMarkdown(url) {
+            NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { _, _, _ in }
         } else {
-            NSWorkspace.shared.open(target)
+            NSWorkspace.shared.open(url)
         }
     }
 

@@ -36,7 +36,7 @@ export function renderBreadcrumb(el: HTMLElement, loc: Location) {
   const tail = collapse ? crumbs.slice(-3) : []
 
   const crumb = (c: (typeof crumbs)[number]) =>
-    `<button type="button" class="crumb${c.file ? ' file' : ''}" data-path="${esc(c.path)}" title="${c.file ? 'Show in Finder' : 'Open in Finder'}: ${esc(c.path)}">${esc(c.name)}</button>`
+    `<button type="button" class="crumb${c.file ? ' file' : ''}" data-path="${esc(c.path)}" title="${c.file ? 'Show in Finder' : 'Open in Finder'}: ${esc(c.path)}"><bdi>${esc(c.name)}</bdi></button>`
   const sep = '<span class="sep" aria-hidden="true">/</span>'
 
   // "/" already reads as the root, so it needs no separator after it.
@@ -57,8 +57,11 @@ export function wireBreadcrumb(el: HTMLElement) {
       const middle = el.querySelector<HTMLElement>('.middle')
       if (middle) {
         const nodes = Array.from(middle.childNodes).slice(1) // drop its leading separator
+        const focused = document.activeElement === b
         middle.remove()
         b.replaceWith(...nodes)
+        // The button is gone, so focus lands on the first folder it revealed.
+        if (focused) nodes.find((n): n is HTMLButtonElement => n instanceof HTMLButtonElement)?.focus()
       }
       return
     }

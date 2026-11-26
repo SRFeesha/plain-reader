@@ -46,7 +46,8 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)')
 const toc = new Toc(
   document.getElementById('toc')!,
   (h) => scrollToHeading(h),
-  (path) => bridge.post({ type: 'openLink', href: path }),
+  // A sidebar entry is a real path, not a link: # and % in its name stay literal.
+  (path) => bridge.post({ type: 'openFile', path }),
 )
 const placeEl = document.getElementById('place')!
 wireBreadcrumb(placeEl)
@@ -146,6 +147,7 @@ function render() {
   for (let i = pre; i < htmls.length - suf; i++) {
     const el = document.createElement('div')
     el.innerHTML = htmls[i]
+    applyDir(el)
     content.insertBefore(el, ref)
   }
   Array.from(content.children).forEach((el, i) => {
@@ -160,11 +162,65 @@ function render() {
   finder.refresh()
 }
 
+// The app reads left to right; document text follows its own direction,
+// element by element, so Hebrew and Arabic paragraphs sit beside English ones.
+// List items aren't here: a list reads in one direction, from its first item,
+// so its markers stay in one column. Hebrew in an English list still reads right.
+const TEXTY = 'p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dl, dt, dd, figcaption'
+const ALWAYS_LTR = 'pre, code, kbd, .code, .json-tree'
+const RTL_SCRIPT = /[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}\p{Script=Samaritan}\p{Script=Mandaic}\p{Script=Adlam}]/u
+
+/**
+ * The first strong letter decides, as dir="auto" does, skipping code, authored
+ * directions and callout titles (often the English default, "Note").
+ */
+function textDir(el: HTMLElement): 'ltr' | 'rtl' | null {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const skip = n.parentElement?.closest('[dir]:not([dir="auto"]), script, style, .callout-title')
+    if (skip && skip !== el && el.contains(skip)) continue
+    const m = /\p{L}/u.exec(n.textContent ?? '')
+    if (m) return RTL_SCRIPT.test(m[0]) ? 'rtl' : 'ltr'
+  }
+  return null
+}
+
+function applyDir(blk: HTMLElement) {
+  for (const el of blk.querySelectorAll<HTMLElement>(ALWAYS_LTR)) if (!el.hasAttribute('dir')) el.dir = 'ltr'
+  for (const el of [blk, ...blk.querySelectorAll<HTMLElement>(TEXTY)]) {
+    if (el.hasAttribute('dir') || (el !== blk && el.parentElement?.closest('li'))) continue
+    // dir="auto" ignores children that set their own direction, so a container
+    // (a list, quote or table) takes it from its text here instead. Anything
+    // without letters (a number cell, a bare link) keeps its parent's side.
+    const d = textDir(el)
+    if (d) el.dir = el.querySelector(TEXTY) ? d : 'auto'
+  }
+  // A callout's title sits on the same side as its body, even when it's the English default "Note".
+  for (const title of blk.querySelectorAll<HTMLElement>('.callout-title')) {
+    const callout = title.closest<HTMLElement>('.callout')
+    if (!callout || (callout.dir !== 'rtl' && callout.dir !== 'ltr')) continue
+    title.dir = callout.dir
+    if (title.parentElement && title.parentElement !== callout) title.parentElement.dir = callout.dir
+  }
+}
+
 function blockIndexAt(line: number) {
   return blocks.findIndex((b) => b.start === line)
 }
 
 // ----------------------------------------------------------------- editing
+
+const BLOCK_NAMES: Record<string, string> = {
+  p: 'paragraph',
+  list: 'list',
+  quote: 'quote',
+  code: 'code block',
+  table: 'table',
+  hr: 'divider',
+  frontmatter: 'properties',
+  esm: 'imports',
+  jsx: 'component',
+}
 
 function startEdit(target: number | { insertAt: number }, caret: number | 'start' | 'end' = 'end') {
   if (editing) return
@@ -203,6 +259,8 @@ function startEdit(target: number | { insertAt: number }, caret: number | 'start
   ta.value = text
   ta.rows = 1
   ta.spellcheck = true
+  ta.dir = 'auto'
+  ta.setAttribute('aria-label', fresh ? 'New block' : `Edit ${/^h\d$/.test(blockKind) ? 'heading' : (BLOCK_NAMES[blockKind] ?? 'block')}`)
   ta.placeholder = kind === 'text' ? 'Start writing.' : source.trim() === '' ? 'Start writing. Type / for blocks.' : 'Type / for blocks'
   el.append(ta)
   autosize(ta)
@@ -333,7 +391,10 @@ function toggleTaskLine(line: number) {
 
 // -------------------------------------------------------------------- modes
 
-function setMode(next: Mode) {
+const MODE_NAMES: Record<Mode, string> = { read: 'Reading', edit: 'Editing', source: 'Source view' }
+
+/** `say` announces the new mode to screen readers, for switches the person made. */
+function setMode(next: Mode, say = false) {
   if (next === 'edit' && kind === 'json') next = 'source' // JSON is edited as raw text
   if (next === mode) return
   if (editing) commitEdit()
@@ -343,10 +404,11 @@ function setMode(next: Mode) {
   body.dataset.mode = next
   if (next === 'source') enterSource()
   updateStatus()
+  if (say) announce(MODE_NAMES[mode])
 }
 
-const toggleEdit = () => setMode(mode === 'edit' ? 'read' : 'edit')
-const toggleSource = () => setMode(mode === 'source' ? (modeBeforeSource === 'source' ? 'read' : modeBeforeSource) : 'source')
+const toggleEdit = () => setMode(mode === 'edit' ? 'read' : 'edit', true)
+const toggleSource = () => setMode(mode === 'source' ? (modeBeforeSource === 'source' ? 'read' : modeBeforeSource) : 'source', true)
 
 function scrollFraction() {
   const max = document.documentElement.scrollHeight - innerHeight
@@ -362,6 +424,8 @@ function enterSource() {
   ta.className = 'editor source'
   ta.value = source
   ta.spellcheck = true
+  ta.dir = 'auto'
+  ta.setAttribute('aria-label', 'Source')
   docEl.insertBefore(ta, tailEl)
   sourceTa = ta
   autosize(ta)
@@ -373,7 +437,7 @@ function enterSource() {
       autosize(ta)
       setSource(ta.value, false)
     },
-    onEscape: () => setMode('read'),
+    onEscape: () => setMode('read', true),
   })
 }
 
@@ -398,14 +462,27 @@ function scrollToHeading(h: Heading) {
     return
   }
   const el = document.getElementById(h.id)
-  if (el) scrollTo({ top: scrollY + el.getBoundingClientRect().top - 32, behavior })
+  if (el) {
+    scrollTo({ top: scrollY + el.getBoundingClientRect().top - 32, behavior })
+    moveFocusTo(el)
+  }
 }
 
 function scrollToId(id: string) {
   const h = toc.headings.find((x) => x.id === id)
   if (h) return scrollToHeading(h)
   const el = document.getElementById(id)
-  if (el) scrollTo({ top: scrollY + el.getBoundingClientRect().top - 32, behavior: reduceMotion.matches ? 'auto' : 'smooth' })
+  if (el) {
+    scrollTo({ top: scrollY + el.getBoundingClientRect().top - 32, behavior: reduceMotion.matches ? 'auto' : 'smooth' })
+    moveFocusTo(el)
+  }
+}
+
+/** Screen readers follow focus, so a jump to a heading or footnote moves it there too. */
+function moveFocusTo(el: HTMLElement) {
+  if (editing) return
+  if (!el.matches('a[href], button, input, textarea, summary, [tabindex]')) el.tabIndex = -1
+  el.focus({ preventScroll: true })
 }
 
 let spyQueued = false
@@ -445,12 +522,16 @@ content.addEventListener('click', (e) => {
   if (box) {
     e.preventDefault()
     if (editing) commitEdit()
+    const focused = document.activeElement === box
     toggleTaskLine(Number(box.dataset.line))
+    // The block re-renders, so focus goes back to the new checkbox on the same line.
+    if (focused) content.querySelector<HTMLElement>(`input.task-check[data-line="${box.dataset.line}"]`)?.focus()
     return
   }
   const copy = t.closest<HTMLButtonElement>('.code-copy')
   if (copy) {
     bridge.copy(copy.parentElement?.querySelector('pre')?.innerText.replace(/\n$/, '') ?? '')
+    announce('Copied')
     copy.textContent = 'Copied'
     setTimeout(() => (copy.textContent = 'Copy'), 1200)
     return
@@ -504,9 +585,8 @@ const themeDot = document.createElement('button')
 statusMode.type = themeDot.type = 'button'
 statusMode.dataset.cmd = 'mode'
 themeDot.className = 'theme-dot'
-themeDot.setAttribute('aria-label', 'Theme')
-themeDot.title = 'Theme'
-themeDot.setAttribute('aria-haspopup', 'true')
+themeDot.setAttribute('aria-haspopup', 'menu')
+themeDot.setAttribute('aria-expanded', 'false')
 statusEl.append(themeDot, statusMode, statusWords)
 
 function updateStatus() {
@@ -539,6 +619,19 @@ function toast(text: string, ms = 2400) {
   toastTimer = window.setTimeout(() => toastEl.classList.remove('on'), ms)
 }
 
+// A hidden polite live region for things only screen readers need to hear.
+const liveEl = document.createElement('div')
+liveEl.className = 'sr'
+liveEl.setAttribute('role', 'status')
+body.append(liveEl)
+let liveTimer = 0
+function announce(text: string) {
+  // Emptied first, so the same message twice is still read.
+  liveEl.textContent = ''
+  clearTimeout(liveTimer)
+  liveTimer = window.setTimeout(() => (liveEl.textContent = text), 60)
+}
+
 // ------------------------------------------------------------------ themes
 
 const THEMES: { id: string; name: string; swatch: string[]; dark?: boolean }[] = [
@@ -558,6 +651,8 @@ function applyTheme(id: string) {
   const root = document.documentElement
   // Swap colours in one frame, with transitions off, so nothing smears.
   root.classList.add('no-transitions')
+  themeDot.setAttribute('aria-label', `Theme: ${t.name}`)
+  themeDot.title = `Theme: ${t.name}`
   if (t.id === 'stone') delete root.dataset.theme
   else root.dataset.theme = t.id
   const dark = t.dark ?? (t.id === 'stone' && systemDark.matches)
@@ -639,17 +734,29 @@ const SHORTCUTS: [string, string][] = [
   ['⌘Z ⇧⌘Z', 'Undo, redo'],
 ]
 
+let shortcutsReturn: HTMLElement | null = null
 function toggleShortcuts() {
   let el = document.querySelector<HTMLElement>('.shortcuts')
-  if (el) return el.remove()
+  if (el) {
+    el.remove()
+    shortcutsReturn?.focus({ preventScroll: true })
+    shortcutsReturn = null
+    return
+  }
   el = document.createElement('div')
   el.className = 'popover shortcuts'
+  // Focus moves in, so screen readers hear the list; it goes back on close.
+  el.setAttribute('role', 'dialog')
+  el.setAttribute('aria-label', 'Keyboard shortcuts')
+  el.tabIndex = -1
   el.innerHTML = `<div class="toc-title">Shortcuts</div><dl>${SHORTCUTS.map(([k, v]) => `<div><dt>${v}</dt><dd>${k
     .split(' ')
     .map((x) => `<kbd>${x}</kbd>`)
     .join('')}</dd></div>`).join('')}</dl>`
-  el.addEventListener('click', () => el!.remove())
+  el.addEventListener('click', () => toggleShortcuts())
   body.append(el)
+  shortcutsReturn = document.activeElement instanceof HTMLElement && document.activeElement !== body ? document.activeElement : null
+  el.focus({ preventScroll: true })
 }
 
 let zoom = Number(localStorage.getItem('plain.zoom') || 1)
@@ -686,7 +793,7 @@ function undo(redo = false) {
 function command(name: string) {
   if (name.startsWith('theme:')) return applyTheme(name.slice(6))
   switch (name) {
-    case 'toggleEdit': return kind === 'json' ? toggleSource() : mode === 'source' ? setMode('edit') : toggleEdit()
+    case 'toggleEdit': return kind === 'json' ? toggleSource() : mode === 'source' ? setMode('edit', true) : toggleEdit()
     case 'toggleSource': return toggleSource()
     case 'toggleToc': return toggleToc()
     case 'find': return finder.open()
@@ -736,10 +843,9 @@ addEventListener('keydown', (e) => {
     return void saveFile()
   }
   if (e.key === 'Escape') {
-    const sc = document.querySelector('.shortcuts')
-    if (sc) return sc.remove()
+    if (document.querySelector('.shortcuts')) return toggleShortcuts()
     if (finder.isOpen) return finder.close()
-    if (mode !== 'read' && !typing) return setMode('read')
+    if (mode !== 'read' && !typing) return setMode('read', true)
   }
   if (mode === 'edit' && !editing && !typing && e.key === 'Enter') {
     e.preventDefault()

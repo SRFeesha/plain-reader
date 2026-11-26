@@ -186,7 +186,7 @@ const MIRROR = [
   'boxSizing', 'width', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
   'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'fontStyle', 'fontVariant', 'fontWeight',
   'fontStretch', 'fontSize', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent',
-  'letterSpacing', 'wordSpacing', 'tabSize',
+  'letterSpacing', 'wordSpacing', 'tabSize', 'direction',
 ] as const
 
 /** Viewport position of a character offset inside a textarea. */
@@ -251,7 +251,9 @@ const SLASH: SlashItem[] = [
 const slash = (() => {
   const el = document.createElement('div')
   el.className = 'popover slash'
+  el.id = 'slash-menu'
   el.setAttribute('role', 'listbox')
+  el.setAttribute('aria-label', 'Insert block')
   let ta: HTMLTextAreaElement | null = null
   let at = -1
   let items: SlashItem[] = []
@@ -275,10 +277,13 @@ const slash = (() => {
       ? items
           .map(
             (it, i) =>
-              `<div class="row${i === index ? ' on' : ''}" data-i="${i}" role="option"><span>${it.label}</span><code>${it.syntax.replace(/</g, '&lt;')}</code></div>`,
+              `<div class="row${i === index ? ' on' : ''}" id="slash-${i}" data-i="${i}" role="option" aria-selected="${i === index}"><span>${it.label}</span><code>${it.syntax.replace(/</g, '&lt;')}</code></div>`,
           )
           .join('')
       : '<div class="none">No matches</div>'
+    // Focus stays in the textarea; the highlighted row is announced through it.
+    if (ta && items.length) ta.setAttribute('aria-activedescendant', `slash-${index}`)
+    else ta?.removeAttribute('aria-activedescendant')
     el.querySelector('.on')?.scrollIntoView({ block: 'nearest' })
   }
 
@@ -295,12 +300,15 @@ const slash = (() => {
     ta = target
     at = pos
     index = 0
+    target.setAttribute('aria-controls', el.id)
     if (!el.isConnected) document.body.appendChild(el)
     el.hidden = false
     update()
   }
 
   function close() {
+    ta?.removeAttribute('aria-activedescendant')
+    ta?.removeAttribute('aria-controls')
     el.hidden = true
     ta = null
     at = -1
